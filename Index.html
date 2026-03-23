@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타케보우키일기 검색기</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;700&display=swap');
+
+:root {
+  --ink: #1a1208;
+  --paper: #f7f3ec;
+  --paper-dark: #ede8de;
+  --sepia: #8b6f47;
+  --sepia-light: #c4a882;
+  --sepia-pale: #e8dcc8;
+  --red: #8b1a1a;
+  --gold: #b8860b;
+  --shadow: rgba(26,18,8,0.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--paper); color: var(--ink); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
+
+header {
+  text-align: center; padding: 50px 20px 36px;
+  border-bottom: 2px solid var(--sepia-light); position: relative;
+}
+header::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, transparent, var(--gold), var(--red), var(--gold), transparent);
+}
+header::after {
+  content: '竹'; position: absolute; right: -10px; top: -10px;
+  font-size: 180px; color: var(--sepia-pale); font-family: 'Noto Serif JP'; font-weight: 700;
+  line-height: 1; pointer-events: none; opacity: 0.4;
+}
+.title-main { font-family: 'Noto Serif JP', serif; font-size: clamp(1.6rem,4vw,3rem); font-weight: 700; letter-spacing: 0.15em; }
+.title-sub { font-size: 0.8rem; color: var(--sepia); letter-spacing: 0.3em; margin-top: 8px; }
+.title-hr { width: 60px; height: 1px; background: linear-gradient(90deg,transparent,var(--gold),transparent); margin: 14px auto; }
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+
+.controls { margin: 36px auto; }
+.ctrl-box {
+  background: #fff; border: 1px solid var(--sepia-pale); border-radius: 6px;
+  padding: 24px 28px; box-shadow: 0 2px 10px var(--shadow);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px;
+}
+.ctrl-box label { display: block; font-size: 0.75rem; color: var(--sepia); letter-spacing: 0.1em; margin-bottom: 6px; }
+.ctrl-box input {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--sepia-light); border-radius: 4px;
+  font-size: 0.9rem; background: var(--paper); color: var(--ink); outline: none;
+}
+.ctrl-box input:focus { border-color: var(--gold); }
+.btn-row { grid-column: 1/-1; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+button {
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none;
+  border-radius: 4px; font-size: 0.88rem; font-weight: 700; transition: all 0.18s; padding: 10px 28px;
+}
+.btn-start { background: var(--ink); color: var(--paper); }
+.btn-start:hover { background: var(--sepia); }
+.btn-start:disabled { background: var(--sepia-pale); color: var(--sepia-light); cursor: not-allowed; }
+.btn-stop { background: var(--red); color: #fff; display: none; }
+.btn-stop:hover { background: #a02020; }
+.btn-stop.on { display: inline-block; }
+.btn-sm { background: #fff; border: 1px solid var(--sepia-light); color: var(--sepia); padding: 6px 16px; font-size: 0.78rem; font-weight: 400; }
+.btn-sm:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+.prog-wrap { margin: 18px auto; display: none; }
+.prog-wrap.on { display: block; }
+.pbar-outer { height: 6px; background: var(--sepia-pale); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.pbar-inner { height: 100%; background: linear-gradient(90deg, var(--gold), var(--sepia)); width: 0%; transition: width 0.25s; }
+.pbar-text { font-size: 0.78rem; color: var(--sepia); text-align: center; min-height: 1.2em; }
+
+.stats { margin: 0 auto 20px; display: none; gap: 10px; flex-wrap: wrap; }
+.stats.on { display: flex; }
+.pill { background: #fff; border: 1px solid var(--sepia-pale); border-radius: 40px; padding: 5px 16px; font-size: 0.78rem; color: var(--sepia); box-shadow: 0 1px 4px var(--shadow); }
+.pill strong { color: var(--ink); font-size: 1rem; margin-right: 3px; }
+
+.search-bar { margin: 0 auto 18px; display: none; gap: 10px; align-items: center; flex-wrap: wrap; }
+.search-bar.on { display: flex; }
+.search-bar input { flex: 1; min-width: 200px; padding: 8px 14px; border: 1px solid var(--sepia-light); border-radius: 4px; font-size: 0.88rem; background: #fff; color: var(--ink); outline: none; }
+.search-bar input:focus { border-color: var(--gold); }
+
+.toc { margin: 0 auto 24px; display: none; }
+.toc.on { display: block; }
+.toc-label { font-size: 0.72rem; color: var(--sepia); letter-spacing: 0.2em; margin-bottom: 10px; }
+.toc-years { display: flex; flex-wrap: wrap; gap: 7px; }
+.toc-y { background: #fff; border: 1px solid var(--sepia-pale); border-radius: 3px; padding: 3px 12px; font-size: 0.8rem; color: var(--sepia); cursor: pointer; text-decoration: none; transition: all 0.15s; }
+.toc-y:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+.export-row { margin: 0 auto 20px; display: none; gap: 8px; flex-wrap: wrap; }
+.export-row.on { display: flex; }
+
+.debug-box {
+  margin: 0 auto 20px; background: #1a1208; color: #c4a882;
+  font-family: monospace; font-size: 0.72rem; padding: 12px 16px; border-radius: 4px;
+  max-height: 160px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; display: none;
+}
+.debug-box.on { display: block; }
+
+#results { margin: 0 auto 60px; }
+.year-sec { margin-bottom: 40px; }
+.year-heading {
+  font-size: 1.4rem; font-weight: 700; letter-spacing: 0.15em;
+  padding-bottom: 10px; border-bottom: 1px solid var(--sepia-light); margin-bottom: 16px; position: relative;
+}
+.year-heading::before { content: ''; position: absolute; bottom: -1px; left: 0; width: 50px; height: 2px; background: var(--gold); }
+
+.mcard {
+  background: #fff; border: 1px solid var(--sepia-pale); border-radius: 5px;
+  margin-bottom: 12px; box-shadow: 0 1px 6px var(--shadow); overflow: hidden;
+  animation: fadeIn 0.3s ease both;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.mcard-head {
+  padding: 13px 18px; background: var(--paper-dark);
+  border-bottom: 1px solid var(--sepia-pale);
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; user-select: none;
+}
+.mcard-head:hover { background: var(--sepia-pale); }
+.mcard-title { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.05em; }
+.mcard-meta { display: flex; gap: 10px; align-items: center; font-size: 0.75rem; color: var(--sepia); }
+.mcard-cnt { background: var(--sepia-pale); border-radius: 40px; padding: 2px 10px; font-size: 0.7rem; }
+.mcard-link { color: var(--sepia-light); text-decoration: none; border-bottom: 1px dashed var(--sepia-pale); font-size: 0.72rem; }
+.mcard-link:hover { color: var(--red); }
+.chevron { font-size: 0.65rem; color: var(--sepia-light); transition: transform 0.2s; }
+.mcard.open .chevron { transform: rotate(180deg); }
+.mcard-body { display: none; }
+.mcard.open .mcard-body { display: block; }
+
+.entry { padding: 18px 22px; border-bottom: 1px solid var(--sepia-pale); }
+.entry:last-child { border-bottom: none; }
+.entry:hover { background: var(--paper); }
+.entry-dline { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; flex-wrap: wrap; }
+.entry-date { font-size: 0.75rem; color: #fff; background: var(--ink); padding: 2px 9px; border-radius: 2px; white-space: nowrap; }
+.entry-title { font-size: 0.92rem; font-weight: 600; color: var(--sepia); font-family: 'Noto Serif JP', serif; }
+.entry-body { font-family: 'Noto Serif JP', serif; font-size: 0.85rem; line-height: 1.9; color: #2a2015; word-break: break-all; }
+
+.empty { text-align: center; padding: 50px 20px; color: var(--sepia); font-size: 0.9rem; }
+mark { background: rgba(184,134,11,0.28); color: inherit; border-radius: 2px; padding: 0 2px; }
+
+footer { text-align: center; padding: 28px 20px; border-top: 1px solid var(--sepia-pale); font-size: 0.72rem; color: var(--sepia-light); letter-spacing: 0.08em; }
+
+@media(max-width:560px) { .ctrl-box { grid-template-columns: 1fr; } .btn-row { flex-direction: column; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-main">竹箒日記 アーカイブ</div>
+  <div class="title-hr"></div>
+  <div class="title-sub">타케보우키일기 검색기</div>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <div class="ctrl-box">
+      <div>
+        <label>시작 연월 (YYYYMM)</label>
+        <input id="inp-start" type="text" value="200211" maxlength="6" placeholder="예: 200211">
+      </div>
+      <div>
+        <label>종료 연월 (YYYYMM)</label>
+        <input id="inp-end" type="text" value="202512" maxlength="6" placeholder="예: 202512">
+      </div>
+      <div class="btn-row">
+        <button class="btn-start" id="btn-start" onclick="startCrawl()">▶ 크롤링 시작</button>
+        <button class="btn-stop" id="btn-stop" onclick="stopCrawl()">■ 중지</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="prog-wrap wrap" id="prog-wrap">
+    <div class="pbar-outer"><div class="pbar-inner" id="pbar"></div></div>
+    <div class="pbar-text" id="pbar-text"></div>
+  </div>
+
+  <div class="stats wrap" id="stats">
+    <div class="pill">발견 <strong id="s-found">0</strong>개월</div>
+    <div class="pill">총 항목 <strong id="s-entries">0</strong>개</div>
+    <div class="pill"><strong id="s-checked">0</strong> / <span id="s-total">0</span> 확인</div>
+  </div>
+
+  <div class="debug-box" id="debug-box"></div>
+
+  <div class="export-row wrap" id="export-row">
+    <button class="btn-sm" onclick="exportJSON()">JSON 내보내기</button>
+    <button class="btn-sm" onclick="exportText()">텍스트 내보내기</button>
+    <button class="btn-sm" onclick="toggleDebug()">디버그 로그</button>
+  </div>
+
+  <div class="search-bar wrap" id="search-bar">
+    <span style="font-size:0.78rem;color:var(--sepia)">검색：</span>
+    <input id="search-inp" type="text" placeholder="키워드로 필터링..." oninput="filterEntries()">
+  </div>
+
+  <div class="toc wrap" id="toc">
+    <div class="toc-label">▸ 연도별 바로가기</div>
+    <div class="toc-years" id="toc-years"></div>
+  </div>
+
+  <div id="results">
+    <div class="empty">
+      위의 「크롤링 시작」버튼을 눌러 탐색을 시작해주세요<br><br>
+      <small style="color:var(--sepia-light)">※ 먼저 범위를 좁혀서 (예: 200501~200512) 테스트 권장</small>
+    </div>
+  </div>
+</div>
+
+<footer>
+  타케보우키일기 검색기 &nbsp;|&nbsp;
+  원문: <a href="http://www.typemoon.org/bbb/diary/" style="color:inherit" target="_blank">typemoon.org</a> &nbsp;|&nbsp;
+  Copyright (C) Takashi Takeuchi &amp; Kinoko Nasu All Rights Reserved.
+</footer>
+
+<script>
+'use strict';
+
+/* ─── 전역 상태 ─────────────────────────────────────────────────── */
+let allData   = {};
+let stopped   = false;
+let totalMo   = 0;
+let checkedMo = 0;
+let foundMo   = 0;
+let totalEnt  = 0;
+
+/* ─── 디버그 ─────────────────────────────────────────────────────── */
+function dbg(msg) {
+  const el = document.getElementById('debug-box');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+function toggleDebug() {
+  document.getElementById('debug-box').classList.toggle('on');
+}
+
+/* ─── 인코딩 자동 감지 디코더 ───────────────────────────────────── */
+// 구형 페이지: EUC-JP / 신형 페이지(2020년대): UTF-8
+// charset 메타태그로 자동 판별
+function decodeAuto(buf) {
+  // 일단 UTF-8로 읽어서 charset 메타태그 확인
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+  const m = utf8.match(/charset=["']?([\w-]+)/i);
+  const cs = m ? m[1].toLowerCase() : 'utf-8';
+  if (cs.includes('euc')) {
+    return new TextDecoder('euc-jp', { fatal: false }).decode(buf);
+  }
+  return utf8; // UTF-8 그대로
+}
+
+/* ─── Fetch ──────────────────────────────────────────────────────── */
+// 브라우저 직접 테스트 확인:
+//   ✅ codetabs + charset 자동감지 → EUC-JP/UTF-8 모두 완벽 처리
+//   ✅ allorigins /raw + euc-jp → 구형 페이지 완벽 처리 (폴백용)
+//   ❌ allorigins /get → 타임아웃 빈발, latin-1 변환 방식 깨짐
+async function fetchPage(url) {
+  // ── 1순위: codetabs (EUC-JP/UTF-8 charset 자동 감지) ─────────────
+  try {
+    const r = await fetch(
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+      { signal: AbortSignal.timeout(15000) }
+    );
+    if (r.ok) {
+      const buf = await r.arrayBuffer();
+      const html = decodeAuto(buf);
+      const dateCount = (html.match(/\d{4}\/\d{1,2}\/\d{1,2}\s*[:：]/g) || []).length;
+      if (dateCount > 0) {
+        dbg('[OK:ct] ' + url.slice(-12) + ' (날짜 ' + dateCount + '개)');
+        return html;
+      }
+      return null; // 일기 없는 달
+    }
+    dbg('[ct HTTP' + r.status + '] ' + url.slice(-12));
+  } catch(e) { dbg('[ct ERR] ' + url.slice(-12) + ' ' + e.message); }
+
+  // ── 2순위: allorigins /raw + EUC-JP (폴백) ───────────────────────
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+        { signal: AbortSignal.timeout(15000) }
+      );
+      if (r.ok) {
+        const buf = await r.arrayBuffer();
+        const html = decodeAuto(buf);
+        const dateCount = (html.match(/\d{4}\/\d{1,2}\/\d{1,2}\s*[:：]/g) || []).length;
+        if (dateCount > 0) {
+          dbg('[OK:ao] ' + url.slice(-12) + ' (날짜 ' + dateCount + '개)');
+          return html;
+        }
+        return null;
+      }
+      dbg('[ao HTTP' + r.status + '] ' + url.slice(-12));
+      return null;
+    } catch(e) {
+      dbg('[ao ERR' + (attempt+1) + '] ' + url.slice(-12) + ' ' + e.message);
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  return null;
+}
+
+/* ─── HTML 파싱 ──────────────────────────────────────────────────── */
+// br 태그를 개행으로 변환해서 텍스트 추출
+function tdText(td) {
+  // <br>, <br/>, <BR> 등을 줄바꿈으로 치환 후 textContent 추출
+  const clone = td.cloneNode(true);
+  clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+  return clone.textContent || '';
+}
+// 구조 (브라우저 테스트로 확인):
+//   table[N] tr[0] td[0]: "2008/6/7 : タイトル"   ← 날짜+제목
+//   table[N] tr[1] td[0]: "본문 텍스트..."         ← 본문
+function parsePage(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const entries = [];
+  const DATE_RE = /^(\d{4}\/\d{1,2}\/\d{1,2})\s*[:：]\s*([\s\S]*)/;
+
+  for (const tbl of doc.querySelectorAll('table')) {
+    const rows = Array.from(tbl.querySelectorAll('tr'));
+    let i = 0;
+    while (i < rows.length) {
+      const tds = rows[i].querySelectorAll('td');
+      if (!tds.length) { i++; continue; }
+
+      const text = tdText(tds[0]).trim();
+      const m = DATE_RE.exec(text);
+      if (!m) { i++; continue; }
+
+      const date  = m[1];
+      const after = m[2].trim();
+      const nl    = after.search(/[\n\r]/);
+      const title = (nl === -1 ? after : after.slice(0, nl)).trim();
+      let   body  = nl !== -1 ? after.slice(nl).trim() : '';
+
+      // 다음 행이 본문
+      if (i + 1 < rows.length) {
+        const nTds = rows[i+1].querySelectorAll('td');
+        if (nTds.length && !DATE_RE.test(tdText(nTds[0]).trim())) {
+          body = tdText(nTds[0]).trim();
+          i++;
+        }
+      }
+
+      if (date) entries.push({ date, title, body });
+      i++;
+    }
+  }
+
+  // 폴백: 전체 텍스트 정규식
+  if (!entries.length) {
+    const txt = (doc.body ? doc.body.textContent : html) || '';
+    const re = /(\d{4}\/\d{1,2}\/\d{1,2})\s*[:：]\s*([^\n\r]+)([\s\S]*?)(?=\d{4}\/\d{1,2}\/\d{1,2}\s*[:：]|$)/g;
+    let m;
+    while ((m = re.exec(txt)))
+      if (m[1] && m[2].trim())
+        entries.push({ date: m[1].trim(), title: m[2].trim(), body: m[3].trim() });
+  }
+
+  return entries.length ? entries : null;
+}
+
+/* ─── 연월 목록 ──────────────────────────────────────────────────── */
+function makeMonths(s, e) {
+  const list = [];
+  let y = parseInt(s.slice(0,4)), mo = parseInt(s.slice(4,6));
+  const ey = parseInt(e.slice(0,4)), em = parseInt(e.slice(4,6));
+  while (y < ey || (y === ey && mo <= em)) {
+    list.push(y + String(mo).padStart(2,'0'));
+    if (++mo > 12) { mo = 1; y++; }
+  }
+  return list;
+}
+
+/* ─── 크롤링 메인 ────────────────────────────────────────────────── */
+async function startCrawl() {
+  const s = document.getElementById('inp-start').value.trim();
+  const e = document.getElementById('inp-end').value.trim();
+  if (!/^\d{6}$/.test(s) || !/^\d{6}$/.test(e)) {
+    alert('연월은 YYYYMM 형식으로 입력해주세요 (예: 200503)');
+    return;
+  }
+
+  allData = {}; stopped = false; checkedMo = 0; foundMo = 0; totalEnt = 0;
+  document.getElementById('debug-box').textContent = '';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('toc-years').innerHTML = '';
+  ['stats','search-bar','toc'].forEach(id => document.getElementById(id).classList.remove('on'));
+
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-stop').classList.add('on');
+  document.getElementById('prog-wrap').classList.add('on');
+  document.getElementById('export-row').classList.add('on');
+  document.getElementById('debug-box').classList.add('on');
+
+  const months = makeMonths(s, e);
+  totalMo = months.length;
+  document.getElementById('s-total').textContent = totalMo;
+  dbg('탐색 시작: ' + s + ' ~ ' + e + ' (' + totalMo + '개월)');
+
+  const BATCH = 3;
+  for (let i = 0; i < months.length; i += BATCH) {
+    if (stopped) break;
+    await Promise.all(months.slice(i, i + BATCH).map(ym => processMonth(ym)));
+    document.getElementById('s-checked').textContent = checkedMo;
+    document.getElementById('pbar').style.width = Math.round(checkedMo / totalMo * 100) + '%';
+    if (!stopped) await new Promise(r => setTimeout(r, 150));
+  }
+
+  const msg = stopped
+    ? `중지 (${checkedMo}/${totalMo} 확인, ${foundMo}개월 발견)`
+    : `완료! ${totalMo}개월 확인 → ${foundMo}개월 발견, ${totalEnt}개 항목`;
+  document.getElementById('pbar-text').textContent = msg;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').classList.remove('on');
+  dbg('=== ' + msg + ' ===');
+
+  if (foundMo > 0) {
+    ['stats','search-bar','toc'].forEach(id => document.getElementById(id).classList.add('on'));
+    buildTOC();
+  }
+  if (!document.querySelector('.mcard')) {
+    document.getElementById('results').innerHTML =
+      '<div class="empty">일기 기록을 찾지 못했습니다.<br>디버그 로그를 확인해주세요.</div>';
+  }
+}
+
+async function processMonth(ym) {
+  if (stopped) return;
+  const url = 'http://www.typemoon.org/bbb/diary/log/' + ym + '.html';
+  document.getElementById('pbar-text').textContent = ym + ' 확인 중...';
+
+  const html = await fetchPage(url);
+  checkedMo++;
+  if (!html) return;
+
+  const entries = parsePage(html);
+  if (!entries) { dbg('[PARSE FAIL] ' + ym); return; }
+
+  dbg('[FOUND] ' + ym + ' → ' + entries.length + '개 항목');
+  const year = ym.slice(0,4), mon = ym.slice(4,6), key = year + '/' + mon;
+  allData[key] = { url, entries };
+  foundMo++;
+  totalEnt += entries.length;
+  document.getElementById('s-found').textContent   = foundMo;
+  document.getElementById('s-entries').textContent = totalEnt;
+  document.getElementById('stats').classList.add('on');
+  renderMonth(year, key, url, entries, '');
+}
+
+function stopCrawl() { stopped = true; }
+
+/* ─── 렌더링 ─────────────────────────────────────────────────────── */
+function renderMonth(year, key, url, entries, q) {
+  const res = document.getElementById('results');
+  let ySec = document.getElementById('ysec-' + year);
+  if (!ySec) {
+    ySec = document.createElement('div');
+    ySec.className = 'year-sec wrap';
+    ySec.id = 'ysec-' + year;
+    ySec.innerHTML = '<div class="year-heading">' + year + '년</div>';
+    let ins = false;
+    for (const ex of res.querySelectorAll('.year-sec')) {
+      if (ex.id.slice(5) > year) { res.insertBefore(ySec, ex); ins = true; break; }
+    }
+    if (!ins) res.appendChild(ySec);
+  }
+
+  const mon = key.split('/')[1];
+  const cid = 'mc-' + key.replace('/','-');
+  document.getElementById(cid)?.remove();
+
+  const card = document.createElement('div');
+  card.className = 'mcard';
+  card.id = cid;
+
+  const eHTML = entries.map(en => {
+    const tH = q ? hl(esc(en.title), q) : esc(en.title);
+    // \n을 <br>로 변환해서 구글 번역기에서도 개행 유지
+    const bodyEsc = esc(en.body).replace(/\n/g, '<br>');
+    const bH = q ? hl(bodyEsc, q) : bodyEsc;
+    return `<div class="entry">
+      <div class="entry-dline">
+        <span class="entry-date">${esc(en.date)}</span>
+        <span class="entry-title">${tH}</span>
+      </div>
+      <div class="entry-body">${bH}</div>
+    </div>`;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="mcard-head" onclick="toggleCard('${cid}')">
+      <span class="mcard-title">${year}년 ${parseInt(mon)}월</span>
+      <span class="mcard-meta">
+        <span class="mcard-cnt">${entries.length}개</span>
+        <a href="${url}" target="_blank" class="mcard-link" onclick="event.stopPropagation()">원문 ↗</a>
+        <span class="chevron">▼</span>
+      </span>
+    </div>
+    <div class="mcard-body">${eHTML}</div>`;
+
+  let ins = false;
+  for (const sc of ySec.querySelectorAll('.mcard')) {
+    if (sc.id.split('-')[2] > mon) { ySec.insertBefore(card, sc); ins = true; break; }
+  }
+  if (!ins) ySec.appendChild(card);
+}
+
+function toggleCard(id) { document.getElementById(id)?.classList.toggle('open'); }
+
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function hl(html, q) {
+  if (!q) return html;
+  return html.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => '<mark>'+m+'</mark>');
+}
+
+/* ─── 검색 ───────────────────────────────────────────────────────── */
+function filterEntries() {
+  const q = document.getElementById('search-inp').value.trim();
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('toc-years').innerHTML = '';
+  for (const key of Object.keys(allData).sort()) {
+    const { url, entries } = allData[key];
+    const year = key.split('/')[0];
+    const filtered = q ? entries.filter(e => e.date.includes(q) || e.title.includes(q) || e.body.includes(q)) : entries;
+    if (filtered.length) renderMonth(year, key, url, filtered, q);
+  }
+  buildTOC();
+}
+
+/* ─── TOC ────────────────────────────────────────────────────────── */
+function buildTOC() {
+  const years = [...new Set(Object.keys(allData).map(k => k.slice(0,4)))].sort();
+  document.getElementById('toc-years').innerHTML = years.map(y =>
+    `<a class="toc-y" href="#ysec-${y}" onclick="document.getElementById('ysec-${y}').scrollIntoView({behavior:'smooth'});return false;">${y}년</a>`
+  ).join('');
+}
+
+/* ─── 내보내기 ───────────────────────────────────────────────────── */
+function exportJSON() {
+  const b = new Blob([JSON.stringify(allData, null, 2)], {type:'application/json'});
+  Object.assign(document.createElement('a'), {href:URL.createObjectURL(b), download:'takebouki.json'}).click();
+}
+function exportText() {
+  const lines = ['타케보우키 일기 아카이브', '='.repeat(50), ''];
+  for (const k of Object.keys(allData).sort()) {
+    const { url, entries } = allData[k];
+    lines.push('━━ ' + k + ' (' + url + ')', '');
+    for (const e of entries) lines.push('[' + e.date + '] ' + e.title, e.body, '');
+    lines.push('');
+  }
+  const b = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
+  Object.assign(document.createElement('a'), {href:URL.createObjectURL(b), download:'takebouki.txt'}).click();
+}
+</script>
+</body>
+</html>
